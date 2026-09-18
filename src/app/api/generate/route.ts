@@ -50,8 +50,14 @@ async function analyzeSubjectWithGemini(
 
   if (!GEMINI_API_KEY) return defaultProfile;
 
-  // Prioritize working Gemini model endpoints
-  const visionModels = ['gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.1-flash-lite-preview'];
+  // Prioritize active, highly reliable Gemini model endpoints
+  const visionModels = [
+    'gemini-3.1-flash-lite-preview',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash-lite',
+    'gemini-3.6-flash',
+    'gemini-flash-latest',
+  ];
 
   const prompt = `Analyze this real person's portrait photograph with extreme precision for an identity-preserving AI portrait transformation.
 CRITICAL: You MUST accurately identify the person's gender, age, ethnicity/skin tone, hair, and facial features so the AI generator never reverses their gender or alters their core identity.
@@ -90,6 +96,7 @@ Return ONLY valid JSON in this exact structure:
               temperature: 0.1,
             },
           }),
+          signal: AbortSignal.timeout(8000),
         }
       );
 
@@ -142,8 +149,8 @@ Return ONLY valid JSON in this exact structure:
 }
 
 /**
- * Step 2: FLUX.1 Neural Engine via Pollinations (100% Free, Photorealistic)
- * Uses high-priority initial tokens to anchor gender, face, and era aesthetics.
+ * Step 2: FLUX.1 Neural Engine via Pollinations
+ * Properly constructs the RESTful prompt URL and verifies realistic output.
  */
 async function generateWithFlux(
   stylePrompt: string,
@@ -152,61 +159,64 @@ async function generateWithFlux(
   profile: SubjectProfile
 ): Promise<string | null> {
   try {
-    // 1. Build prompt with Subject Identity as FIRST tokens (Tokens 1-15)
-    // Diffusion models assign heaviest attention weights to early prompt tokens.
-    const subjectPrefix = `${profile.identityLead}, ${profile.hair}, ${profile.facialHair !== 'none' ? profile.facialHair + ', ' : ''}${profile.facialFeatures}`;
+    // 1. Blend style requirements with subject identity and facial features
+    const subjectTraits = `${profile.genderNoun}, ${profile.ageGroup}, ${profile.ethnicitySkinTone}, with ${profile.hair}${profile.facialHair !== 'none' ? ', ' + profile.facialHair : ''}, ${profile.facialFeatures}`;
+    const enrichedPrompt = `Authentic ${styleTitle} portrait photograph of a ${subjectTraits}. ${stylePrompt}. Exact facial identity, authentic bone structure, natural gaze, master studio lighting, 8k resolution, photorealistic film texture, masterpiece.`;
 
-    const enrichedPrompt = `Award-winning photographic portrait of ${subjectPrefix}, seamlessly transformed into ${styleTitle} era. ${stylePrompt}. Exact facial identity, exact gender, authentic bone structure, and natural gaze. Shot on 35mm Hasselblad medium format, master studio key lighting, 8k resolution, authentic skin texture, photorealistic movie still.`;
-
-    // 2. Build negative prompt with mandatory gender inversion blockers
-    const negativePrompt = `${profile.negativeGenderTerms}, opposite gender, cross-gender, gender swap, transgender, ${styleNegativePrompt || ''}, bad anatomy, extra limbs, deformed face, blurry eyes, double heads, cartoon, plastic skin, low resolution, oversaturated, watermark`;
+    // 2. Build negative prompt with mandatory gender inversion and artifact blockers
+    const negativePrompt = `${profile.negativeGenderTerms}, opposite gender, cross-gender, gender swap, transgender, ${styleNegativePrompt || ''}, bad anatomy, extra limbs, deformed face, blurry eyes, double heads, cartoon, plastic skin, low resolution, watermark`;
 
     const randomSeed = Math.floor(Math.random() * 10000000);
 
-    // Attempt Method A: JSON POST body (no query string length limits)
+    // Static placeholder asset returned by Pollinations on invalid root requests
+    const POLLINATIONS_PLACEHOLDER_SIZE = 122643;
+
+    // Primary: High-fidelity generation via Pollinations prompt endpoint
+    const encodedPrompt = encodeURIComponent(enrichedPrompt);
+    const encodedNeg = encodeURIComponent(negativePrompt);
+    const primaryUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?negative_prompt=${encodedNeg}&model=flux&width=1024&height=1024&nologo=true&seed=${randomSeed}`;
+
     try {
-      const postRes = await fetch('https://image.pollinations.ai/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: enrichedPrompt,
-          negative_prompt: negativePrompt,
-          model: 'flux',
-          width: 1024,
-          height: 1024,
-          nologo: true,
-          seed: randomSeed,
-        }),
+      const res = await fetch(primaryUrl, {
+        signal: AbortSignal.timeout(25000),
       });
 
-      if (postRes.ok) {
-        const arrayBuffer = await postRes.arrayBuffer();
-        if (arrayBuffer.byteLength > 1000) {
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer();
+        if (arrayBuffer.byteLength > 1000 && arrayBuffer.byteLength !== POLLINATIONS_PLACEHOLDER_SIZE) {
           const b64 = Buffer.from(arrayBuffer).toString('base64');
-          const contentType = postRes.headers.get('content-type') || 'image/jpeg';
+          const contentType = res.headers.get('content-type') || 'image/jpeg';
           return `data:${contentType};base64,${b64}`;
         }
       }
-    } catch (postErr) {
-      console.warn('[Nexora AI] Pollinations POST attempt notice:', postErr);
+    } catch (primaryErr) {
+      console.warn('[Nexora AI] Pollinations primary attempt notice:', primaryErr);
     }
 
-    // Attempt Method B: GET query URL fallback
-    const encodedPrompt = encodeURIComponent(enrichedPrompt);
-    const encodedNeg = encodeURIComponent(negativePrompt);
-    const getUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?negative_prompt=${encodedNeg}&model=flux&width=1024&height=1024&nologo=true&seed=${randomSeed}`;
+    // Fallback: Streamlined prompt with 768x768 resolution for faster inference
+    const streamlinedPrompt = encodeURIComponent(
+      `Masterpiece ${styleTitle} portrait of a ${profile.ethnicitySkinTone} ${profile.genderNoun} with ${profile.hair}. ${stylePrompt}. Photorealistic 8k.`
+    );
+    const fallbackUrl = `https://image.pollinations.ai/prompt/${streamlinedPrompt}?negative_prompt=${encodedNeg}&width=768&height=768&nologo=true&seed=${randomSeed}`;
 
-    const getRes = await fetch(getUrl);
-    if (getRes.ok) {
-      const arrayBuffer = await getRes.arrayBuffer();
-      if (arrayBuffer.byteLength > 1000) {
-        const b64 = Buffer.from(arrayBuffer).toString('base64');
-        const contentType = getRes.headers.get('content-type') || 'image/jpeg';
-        return `data:${contentType};base64,${b64}`;
+    try {
+      const fbRes = await fetch(fallbackUrl, {
+        signal: AbortSignal.timeout(20000),
+      });
+
+      if (fbRes.ok) {
+        const arrayBuffer = await fbRes.arrayBuffer();
+        if (arrayBuffer.byteLength > 1000 && arrayBuffer.byteLength !== POLLINATIONS_PLACEHOLDER_SIZE) {
+          const b64 = Buffer.from(arrayBuffer).toString('base64');
+          const contentType = fbRes.headers.get('content-type') || 'image/jpeg';
+          return `data:${contentType};base64,${b64}`;
+        }
       }
+    } catch (fbErr) {
+      console.warn('[Nexora AI] Pollinations fallback attempt notice:', fbErr);
     }
   } catch (err) {
-    console.warn('[Nexora AI] Pollinations FLUX attempt notice:', err);
+    console.warn('[Nexora AI] Pollinations generation error:', err);
   }
   return null;
 }

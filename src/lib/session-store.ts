@@ -10,11 +10,10 @@ export interface SessionRecord {
   genderHint?: string;
 }
 
-declare global {
-  var __nexora_sessions: Map<string, SessionRecord> | undefined;
-}
+const globalForSessions = globalThis as unknown as {
+  sessions?: Map<string, SessionRecord>;
+};
 
 // Guarantee singleton across all Next.js route chunks in both dev and production
-export const sessions: Map<string, SessionRecord> =
-  globalThis.__nexora_sessions ?? new Map<string, SessionRecord>();
-globalThis.__nexora_sessions = sessions;
+export const sessions = globalForSessions.sessions ?? new Map<string, SessionRecord>();
+globalForSessions.sessions = sessions;
