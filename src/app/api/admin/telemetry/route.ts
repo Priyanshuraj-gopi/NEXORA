@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { sessions } from '@/lib/session-store';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const allSessions = Array.from(sessions.values());
   const total = allSessions.length;
