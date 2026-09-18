@@ -345,7 +345,7 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                 <div className="flex items-center justify-between p-2.5 rounded bg-[#141822] border border-[#1F2533]">
                   <span className="text-[#9CA3AF]">Vision Profiling</span>
                   <span className="text-emerald-400 font-mono font-medium">
-                    {telemetry?.hasGemini ? 'Gemini 2.5 Flash' : 'Standard'}
+                    {telemetry?.hasGemini ? 'Gemini Multimodal Vision (Active)' : 'Standard'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-2.5 rounded bg-[#141822] border border-[#1F2533]">

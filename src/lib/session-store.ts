@@ -7,6 +7,7 @@ export interface SessionRecord {
   processingStage: string | null;
   createdAt: Date;
   error: string | null;
+  genderHint?: string;
 }
 
 const globalForSessions = globalThis as unknown as {

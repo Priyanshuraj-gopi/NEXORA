@@ -7,12 +7,13 @@ import Link from 'next/link';
 import { cn, isValidImageType, isValidImageSize, formatFileSize } from '@/lib/utils';
 
 interface UploadZoneProps {
-  onImageSelect: (file: File, preview: string) => void;
+  onImageSelect: (file: File, preview: string, genderHint?: 'auto' | 'male' | 'female') => void;
 }
 
 export function UploadZone({ onImageSelect }: UploadZoneProps) {
   const [hasConsent, setHasConsent] = useState(false);
   const [consentError, setConsentError] = useState(false);
+  const [genderHint, setGenderHint] = useState<'auto' | 'male' | 'female'>('auto');
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -97,14 +98,14 @@ export function UploadZone({ onImageSelect }: UploadZoneProps) {
       setIsCompressing(true);
       try {
         const { file: optimized, preview } = await compressImage(file);
-        onImageSelect(optimized, preview);
+        onImageSelect(optimized, preview, genderHint);
       } catch {
-        onImageSelect(file, URL.createObjectURL(file));
+        onImageSelect(file, URL.createObjectURL(file), genderHint);
       } finally {
         setIsCompressing(false);
       }
     },
-    [compressImage, hasConsent, onImageSelect]
+    [compressImage, genderHint, hasConsent, onImageSelect]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -458,6 +459,54 @@ export function UploadZone({ onImageSelect }: UploadZoneProps) {
             You must agree to the data processing terms before capturing or uploading a photograph.
           </p>
         )}
+      </div>
+
+      {/* Identity & Gender Likeness Anchor */}
+      <div className="p-3.5 rounded-lg bg-[#111319] border border-[#212530] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <span className="text-xs font-semibold text-white block">Identity & Likeness Anchor</span>
+          <span className="text-[11px] text-[#9CA3AF]">
+            Guarantees accurate gender preservation and zero identity reversal
+          </span>
+        </div>
+        <div className="flex items-center gap-1 p-1 rounded-md bg-[#08090C] border border-[#212530] shrink-0">
+          <button
+            type="button"
+            onClick={() => setGenderHint('auto')}
+            className={cn(
+              'px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer',
+              genderHint === 'auto'
+                ? 'bg-white text-[#08090C] font-semibold shadow-sm'
+                : 'text-[#9CA3AF] hover:text-white'
+            )}
+          >
+            Auto-Detect (AI)
+          </button>
+          <button
+            type="button"
+            onClick={() => setGenderHint('male')}
+            className={cn(
+              'px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer',
+              genderHint === 'male'
+                ? 'bg-white text-[#08090C] font-semibold shadow-sm'
+                : 'text-[#9CA3AF] hover:text-white'
+            )}
+          >
+            Gentleman / Male
+          </button>
+          <button
+            type="button"
+            onClick={() => setGenderHint('female')}
+            className={cn(
+              'px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer',
+              genderHint === 'female'
+                ? 'bg-white text-[#08090C] font-semibold shadow-sm'
+                : 'text-[#9CA3AF] hover:text-white'
+            )}
+          >
+            Lady / Female
+          </button>
+        </div>
       </div>
 
       {/* Upload Dropzone */}

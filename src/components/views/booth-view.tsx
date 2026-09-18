@@ -17,17 +17,22 @@ export function BoothView() {
   const [step, setStep] = useState<BoothStep>('upload');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [genderHint, setGenderHint] = useState<'auto' | 'male' | 'female'>('auto');
   const [selectedStyle, setSelectedStyle] = useState<Style | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [processingStage, setProcessingStage] = useState<ProcessingStage>('uploading');
   const [error, setError] = useState<string | null>(null);
 
-  const handleImageUpload = useCallback((file: File, preview: string) => {
-    setUploadedFile(file);
-    setUploadedImage(preview);
-    setStep('style');
-  }, []);
+  const handleImageUpload = useCallback(
+    (file: File, preview: string, gender?: 'auto' | 'male' | 'female') => {
+      setUploadedFile(file);
+      setUploadedImage(preview);
+      if (gender) setGenderHint(gender);
+      setStep('style');
+    },
+    []
+  );
 
   const handleStyleSelect = useCallback(
     async (style: (typeof STYLES_SEED)[0] & { id: string }) => {
@@ -41,6 +46,7 @@ export function BoothView() {
         if (uploadedFile) {
           formData.append('image', uploadedFile);
           formData.append('style', style.slug);
+          formData.append('genderHint', genderHint);
         }
 
         const uploadRes = await fetch('/api/upload', {
@@ -60,6 +66,7 @@ export function BoothView() {
           body: JSON.stringify({
             sessionId: sid,
             styleSlug: style.slug,
+            genderHint,
           }),
         });
 
@@ -107,13 +114,14 @@ export function BoothView() {
         setStep('upload');
       }
     },
-    [uploadedFile]
+    [uploadedFile, genderHint]
   );
 
   const handleReset = useCallback(() => {
     setStep('upload');
     setUploadedImage(null);
     setUploadedFile(null);
+    setGenderHint('auto');
     setSelectedStyle(null);
     setResultImage(null);
     setSessionId(null);

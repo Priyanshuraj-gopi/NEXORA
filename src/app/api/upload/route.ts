@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const image = formData.get('image') as File;
     const style = formData.get('style') as string;
+    const genderHint = (formData.get('genderHint') as string) || 'auto';
 
     if (!image) {
       return NextResponse.json({ success: false, error: 'No photograph provided' }, { status: 400 });
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
       processingStage: null,
       createdAt: new Date(),
       error: null,
+      genderHint,
     });
 
     return NextResponse.json({

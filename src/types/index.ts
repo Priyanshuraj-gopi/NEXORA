@@ -71,7 +71,8 @@ export interface AnalyticsEntry {
 export interface GenerateRequest {
   sessionId: string;
   styleSlug: string;
-  inputImagePath: string;
+  inputImagePath?: string;
+  genderHint?: 'auto' | 'male' | 'female';
 }
 
 export interface GenerateResponse {
