@@ -69,7 +69,7 @@ export function ResultScreen({ resultImage, sessionId, styleName, onReset }: Res
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
       setVideoDownloaded(true);
       setTimeout(() => setVideoDownloaded(false), 3500);
     } catch (err) {

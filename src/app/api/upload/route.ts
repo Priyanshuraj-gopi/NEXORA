@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSessionId } from '@/lib/utils';
-import { sessions } from '@/lib/session-store';
+import { sessions, purgeExpiredSessions } from '@/lib/session-store';
 
 // In-memory sliding window IP rate limiter (10 uploads per minute per IP)
 const ipUploadCounts = new Map<string, { count: number; resetAt: number }>();
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
     const base64 = Buffer.from(bytes).toString('base64');
 
     const sessionId = generateSessionId();
+    purgeExpiredSessions();
 
     // Store session in volatile in-memory map
     sessions.set(sessionId, {

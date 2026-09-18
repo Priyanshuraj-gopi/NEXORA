@@ -244,6 +244,29 @@ function applyAtmosphericLighting(
   ctx.restore();
 }
 
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+  } else {
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+  }
+}
+
 /**
  * Draws the official Nexora Badge Watermark
  */
@@ -267,7 +290,7 @@ function drawNexoraWatermark(
   // Dark frosted pill
   ctx.fillStyle = 'rgba(7, 11, 23, 0.86)';
   ctx.beginPath();
-  ctx.roundRect(x, y, badgeWidth, badgeHeight, radius);
+  drawRoundedRect(ctx, x, y, badgeWidth, badgeHeight, radius);
   ctx.fill();
 
   // Crisp boundary border
@@ -283,7 +306,7 @@ function drawNexoraWatermark(
 
   ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
-  ctx.roundRect(iconX, iconY, iconSize, iconSize, iconRadius);
+  drawRoundedRect(ctx, iconX, iconY, iconSize, iconSize, iconRadius);
   ctx.fill();
 
   // Icon Letter 'N'

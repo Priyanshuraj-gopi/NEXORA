@@ -86,12 +86,14 @@ export default function MobileResultPage({
         durationSeconds: 4,
       });
 
+      const videoUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
+      a.href = videoUrl;
       a.download = `NEXORA-${result?.style.toUpperCase() || 'MOTION'}-${sessionId}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(videoUrl), 10000);
       setVideoDownloaded(true);
       setTimeout(() => setVideoDownloaded(false), 3500);
     } catch (err) {

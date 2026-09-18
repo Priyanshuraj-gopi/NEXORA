@@ -46,18 +46,32 @@ export async function generateCinematicVideo(
           opacity: Math.random() * 0.7 + 0.2,
         }));
 
-        // Determine stream mimeType supported by browser
-        let mimeType = 'video/webm;codecs=vp9';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'video/webm';
-        }
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'video/mp4';
+        // Check MediaRecorder and canvas stream support
+        if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
+          reject(new Error('Video generation is not supported in this environment'));
+          return;
         }
 
-        const stream = canvas.captureStream(fps);
+        const captureStreamFn = canvas.captureStream || (canvas as unknown as { webkitCaptureStream?: (fps: number) => MediaStream }).webkitCaptureStream;
+        if (!captureStreamFn) {
+          reject(new Error('Canvas video capture is not supported in this browser'));
+          return;
+        }
+
+        // Determine stream mimeType supported by browser
+        let mimeType = 'video/webm;codecs=vp9';
+        if (typeof MediaRecorder.isTypeSupported === 'function') {
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm';
+          }
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/mp4';
+          }
+        }
+
+        const stream = captureStreamFn.call(canvas, fps);
         const recorder = new MediaRecorder(stream, {
-          mimeType: MediaRecorder.isTypeSupported(mimeType) ? mimeType : undefined,
+          mimeType: typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(mimeType) ? mimeType : undefined,
           videoBitsPerSecond: 6000000, // 6 Mbps high definition
         });
 
@@ -129,9 +143,25 @@ export async function generateCinematicVideo(
           const x = canvas.width - badgeWidth - 32;
           const y = canvas.height - badgeHeight - 32;
 
+          function drawRoundRectPath(cx: CanvasRenderingContext2D, rx: number, ry: number, rw: number, rh: number, rad: number) {
+            if (typeof cx.roundRect === 'function') {
+              cx.roundRect(rx, ry, rw, rh, rad);
+            } else {
+              cx.moveTo(rx + rad, ry);
+              cx.lineTo(rx + rw - rad, ry);
+              cx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + rad);
+              cx.lineTo(rx + rw, ry + rh - rad);
+              cx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - rad, ry + rh);
+              cx.lineTo(rx + rad, ry + rh);
+              cx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - rad);
+              cx.lineTo(rx, ry + rad);
+              cx.quadraticCurveTo(rx, ry, rx + rad, ry);
+            }
+          }
+
           ctx.fillStyle = 'rgba(7, 11, 23, 0.88)';
           ctx.beginPath();
-          ctx.roundRect(x, y, badgeWidth, badgeHeight, 16);
+          drawRoundRectPath(ctx, x, y, badgeWidth, badgeHeight, 16);
           ctx.fill();
 
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
@@ -144,7 +174,7 @@ export async function generateCinematicVideo(
           const iconY = y + (badgeHeight - iconSize) / 2;
           ctx.fillStyle = '#FFFFFF';
           ctx.beginPath();
-          ctx.roundRect(iconX, iconY, iconSize, iconSize, 8);
+          drawRoundRectPath(ctx, iconX, iconY, iconSize, iconSize, 8);
           ctx.fill();
 
           ctx.fillStyle = '#08090C';

@@ -471,8 +471,8 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                     <span className="text-xs font-semibold text-white">OpenAI DALL-E (Primary)</span>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${telemetry?.apiUsage?.openai.isQuotaExceeded
-                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                      : 'bg-white/10 text-white border border-white/20'
+                    ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    : 'bg-white/10 text-white border border-white/20'
                     }`}>
                     {telemetry?.apiUsage?.openai.isQuotaExceeded ? 'LIMIT REACHED' : '200 RPD / 50 RPM'}
                   </span>
@@ -497,10 +497,10 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                   <div className="w-full h-2 rounded-full bg-[#0A0C10] border border-[#1E2330] overflow-hidden">
                     <div
                       className={`h-full transition-all duration-500 rounded-full ${(telemetry?.apiUsage?.openai.percentUsed || 0) >= 100
-                          ? 'bg-rose-500'
-                          : (telemetry?.apiUsage?.openai.percentUsed || 0) > 70
-                            ? 'bg-amber-400'
-                            : 'bg-white'
+                        ? 'bg-rose-500'
+                        : (telemetry?.apiUsage?.openai.percentUsed || 0) > 70
+                          ? 'bg-amber-400'
+                          : 'bg-white'
                         }`}
                       style={{ width: `${Math.min(100, Math.max(2, telemetry?.apiUsage?.openai.percentUsed || 0))}%` }}
                     />
@@ -563,10 +563,10 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                   <div className="w-full h-2 rounded-full bg-[#0A0C10] border border-[#1E2330] overflow-hidden">
                     <div
                       className={`h-full transition-all duration-500 rounded-full ${(telemetry?.apiUsage?.gemini.percentUsed || 0) > 90
-                          ? 'bg-rose-500'
-                          : (telemetry?.apiUsage?.gemini.percentUsed || 0) > 70
-                            ? 'bg-amber-400'
-                            : 'bg-blue-400'
+                        ? 'bg-rose-500'
+                        : (telemetry?.apiUsage?.gemini.percentUsed || 0) > 70
+                          ? 'bg-amber-400'
+                          : 'bg-blue-400'
                         }`}
                       style={{ width: `${Math.min(100, Math.max(2, telemetry?.apiUsage?.gemini.percentUsed || 0))}%` }}
                     />
