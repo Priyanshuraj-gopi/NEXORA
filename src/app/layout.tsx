@@ -37,7 +37,8 @@ export const metadata: Metadata = {
       'Professional digital photo booth application for events and exhibitions.',
   },
   icons: {
-    icon: '/icon.svg',
+    icon: '/logo.png',
+    apple: '/logo.png',
   },
 };
 

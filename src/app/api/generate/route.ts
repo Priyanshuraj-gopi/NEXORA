@@ -7,14 +7,14 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
 
 /**
- * Step 1: Real-time Subject Analysis with Gemini 3.6 Flash (Status 200 OK)
+ * Step 1: Real-time Subject Analysis with Gemini 2.5 Flash
  * Inspects the uploaded photo to identify face geometry, gender, hair, and expression.
  */
 async function analyzeSubjectWithGemini(imageBase64: string): Promise<string> {
   if (!GEMINI_API_KEY) return '';
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

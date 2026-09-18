@@ -66,11 +66,18 @@ export default function ContactPage() {
             <span>Return to Booth</span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-white text-[#08090C] flex items-center justify-center font-bold text-xs">
-              N
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/logo.png"
+              alt="Nexora TAPMI Bengaluru IT Club Logo"
+              className="w-7 h-7 object-contain drop-shadow-sm"
+            />
+            <div className="flex flex-col">
+              <span className="font-bold tracking-[0.2em] text-sm text-white leading-none">NEXORA</span>
+              <span className="text-[9px] font-mono text-[#9CA3AF] tracking-tight mt-0.5">
+                TAPMI BENGALURU IT CLUB
+              </span>
             </div>
-            <span className="font-bold tracking-[0.2em] text-sm text-white">NEXORA</span>
           </div>
         </div>
       </header>

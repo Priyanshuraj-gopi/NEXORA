@@ -178,14 +178,18 @@ export default function MobileResultPage({
       {/* Mobile Top Header */}
       <header className="p-4 sm:p-5 text-center border-b border-[#212530] bg-[#0E1118]/90 backdrop-blur-md sticky top-0 z-30">
         <div className="inline-flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-md bg-white text-[#08090C] flex items-center justify-center font-bold text-xs tracking-tight shadow-sm">
-            N
+          <img
+            src="/logo.png"
+            alt="Nexora TAPMI Bengaluru IT Club Logo"
+            className="w-7 h-7 object-contain drop-shadow-sm"
+          />
+          <div className="flex flex-col text-left">
+            <h1 className="text-base font-bold tracking-[0.2em] text-white leading-none">NEXORA</h1>
+            <span className="text-[9px] font-mono text-[#9CA3AF] tracking-tight mt-0.5">
+              TAPMI BENGALURU IT CLUB
+            </span>
           </div>
-          <h1 className="text-base font-bold tracking-[0.2em] text-white">NEXORA</h1>
         </div>
-        <p className="text-[11px] text-[#9CA3AF] mt-0.5 font-medium tracking-normal">
-          Same You. Different Era.
-        </p>
       </header>
 
       {/* Main Content */}

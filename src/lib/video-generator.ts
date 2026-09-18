@@ -158,9 +158,9 @@ export async function generateCinematicVideo(
           ctx.font = 'bold 15px system-ui, sans-serif';
           ctx.fillText('NEXORA MOTION', iconX + iconSize + 12, y + 26);
 
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-          ctx.font = '11px system-ui, sans-serif';
-          ctx.fillText(`${options.styleName.toUpperCase()} • AI LIVE MOTION`, iconX + iconSize + 12, y + 44);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.font = '10px system-ui, sans-serif';
+          ctx.fillText(`${options.styleName.toUpperCase()} • TAPMI IT CLUB`, iconX + iconSize + 12, y + 44);
 
           ctx.restore();
 

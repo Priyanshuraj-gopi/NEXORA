@@ -102,6 +102,16 @@ export function getBookingInquiries(): BookingInquiry[] {
   );
 }
 
+function sanitizeCSVCell(value: string | undefined | null): string {
+  if (!value) return '""';
+  let str = String(value).replace(/"/g, '""');
+  // Neutralize CSV formula injection (CWE-1236)
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  return `"${str}"`;
+}
+
 export function exportLeadsToCSV(): string {
   const leads = getLeads();
   const headers = [
@@ -118,16 +128,16 @@ export function exportLeadsToCSV(): string {
   ];
 
   const rows = leads.map((l) => [
-    l.id,
-    l.sessionId,
-    `"${l.name.replace(/"/g, '""')}"`,
-    `"${l.email.replace(/"/g, '""')}"`,
-    `"${(l.phone || '').replace(/"/g, '""')}"`,
-    `"${l.style.replace(/"/g, '""')}"`,
+    sanitizeCSVCell(l.id),
+    sanitizeCSVCell(l.sessionId),
+    sanitizeCSVCell(l.name),
+    sanitizeCSVCell(l.email),
+    sanitizeCSVCell(l.phone || ''),
+    sanitizeCSVCell(l.style),
     l.marketingConsent ? 'YES' : 'NO',
-    l.lifecycleStage,
-    l.deliveryStatus,
-    l.createdAt.toISOString(),
+    sanitizeCSVCell(l.lifecycleStage),
+    sanitizeCSVCell(l.deliveryStatus),
+    sanitizeCSVCell(l.createdAt.toISOString()),
   ]);
 
   return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');

@@ -27,7 +27,7 @@ export async function GET() {
       hasGemini: !!process.env.GEMINI_API_KEY,
       hasOpenAI: !!process.env.OPENAI_API_KEY,
       primaryEngine: 'Pollinations FLUX.1 (Photorealistic)',
-      visionEngine: 'Google Gemini 3.6 Flash',
+      visionEngine: 'Google Gemini 2.5 Flash',
     },
     recentSessions: allSessions
       .slice(-10)
