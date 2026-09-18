@@ -10,7 +10,7 @@ import { AdminView } from '@/components/views/admin-view';
 type MasterMode = 'booth' | 'display' | 'admin';
 
 export default function MasterAppPage() {
-  const [activeMode, setActiveMode] = useState<MasterMode>('booth');
+  const [activeMode, setActiveMode] = useState<MasterMode>('display');
   const [hideSwitcher, setHideSwitcher] = useState(false);
 
   return (
@@ -113,7 +113,9 @@ export default function MasterAppPage() {
       {/* Active Master View */}
       <div className="flex-1 flex flex-col">
         {activeMode === 'booth' && <BoothView />}
-        {activeMode === 'display' && <DisplayView />}
+        {activeMode === 'display' && (
+          <DisplayView onNavigateToBooth={() => setActiveMode('booth')} />
+        )}
         {activeMode === 'admin' && (
           <AdminView onSwitchView={(view) => setActiveMode(view)} />
         )}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sessions } from '@/lib/session-store';
 import { STYLES_SEED } from '@/config/styles-seed';
+import { recordGeminiCall, recordFluxCall, recordFallbackCall } from '@/lib/api-meter';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
@@ -75,6 +76,7 @@ Return ONLY valid JSON in this exact structure:
   "identity_lead": "A photorealistic portrait of an Indian young adult [man/woman] with [hair] and [skin tone]"
 }`;
 
+  const t0 = Date.now();
   for (const model of visionModels) {
     try {
       const res = await fetch(
@@ -105,6 +107,7 @@ Return ONLY valid JSON in this exact structure:
         const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
         if (rawJson) {
           const parsed = JSON.parse(rawJson);
+          recordGeminiCall(true, Date.now() - t0, model);
           console.log(`[Nexora Vision - ${model}] Subject Identity Analyzed:`, {
             gender: parsed.gender,
             ethnicity: parsed.ethnicity_skin_tone,
@@ -145,6 +148,7 @@ Return ONLY valid JSON in this exact structure:
     }
   }
 
+  recordGeminiCall(false, Date.now() - t0, 'gemini-failed');
   return defaultProfile;
 }
 
@@ -158,6 +162,7 @@ async function generateWithFlux(
   styleNegativePrompt: string | undefined,
   profile: SubjectProfile
 ): Promise<string | null> {
+  const t0 = Date.now();
   try {
     // 1. Blend style requirements with subject identity and facial features
     const subjectTraits = `${profile.genderNoun}, ${profile.ageGroup}, ${profile.ethnicitySkinTone}, with ${profile.hair}${profile.facialHair !== 'none' ? ', ' + profile.facialHair : ''}, ${profile.facialFeatures}`;
@@ -186,6 +191,7 @@ async function generateWithFlux(
         if (arrayBuffer.byteLength > 1000 && arrayBuffer.byteLength !== POLLINATIONS_PLACEHOLDER_SIZE) {
           const b64 = Buffer.from(arrayBuffer).toString('base64');
           const contentType = res.headers.get('content-type') || 'image/jpeg';
+          recordFluxCall(true, Date.now() - t0, 'flux-1024');
           return `data:${contentType};base64,${b64}`;
         }
       }
@@ -209,6 +215,7 @@ async function generateWithFlux(
         if (arrayBuffer.byteLength > 1000 && arrayBuffer.byteLength !== POLLINATIONS_PLACEHOLDER_SIZE) {
           const b64 = Buffer.from(arrayBuffer).toString('base64');
           const contentType = fbRes.headers.get('content-type') || 'image/jpeg';
+          recordFluxCall(true, Date.now() - t0, 'flux-768');
           return `data:${contentType};base64,${b64}`;
         }
       }
@@ -218,6 +225,7 @@ async function generateWithFlux(
   } catch (err) {
     console.warn('[Nexora AI] Pollinations generation error:', err);
   }
+  recordFluxCall(false, Date.now() - t0, 'flux-failed');
   return null;
 }
 
@@ -229,6 +237,7 @@ async function generateWithHuggingFace(
   profile: SubjectProfile
 ): Promise<string | null> {
   if (!HUGGINGFACE_API_KEY) return null;
+  const t0 = Date.now();
   try {
     const fullPrompt = `${profile.identityLead}. ${prompt}`;
     const res = await fetch(
@@ -247,6 +256,7 @@ async function generateWithHuggingFace(
       const arrayBuffer = await res.arrayBuffer();
       if (arrayBuffer.byteLength > 1000) {
         const b64 = Buffer.from(arrayBuffer).toString('base64');
+        recordFallbackCall(true, Date.now() - t0);
         return `data:image/jpeg;base64,${b64}`;
       }
     }
@@ -309,6 +319,7 @@ export async function POST(request: NextRequest) {
         // 4. Client Pixel Transformation Fallback (guarantees 100% likeness)
         if (!resultUrl) {
           console.log(`[Nexora AI] Offline mode: Grading ${style.title} locally.`);
+          recordFallbackCall(false, 0);
           resultUrl = `data:image/jpeg;base64,${session.inputImageBase64}`;
         }
 

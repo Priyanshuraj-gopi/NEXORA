@@ -1,8 +1,8 @@
 'use client';
-
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QrCode, Smartphone, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { QrCode, Smartphone, RefreshCw, CheckCircle2, Camera, ArrowRight } from 'lucide-react';
 import { ProcessingScreen } from '@/components/processing-screen';
 import type { ProcessingStage } from '@/types';
 import QRCode from 'qrcode';
@@ -20,7 +20,12 @@ interface ActiveSession {
 
 import { STYLES_SEED } from '@/config/styles-seed';
 
-export function DisplayView() {
+interface DisplayViewProps {
+  onNavigateToBooth?: () => void;
+}
+
+export function DisplayView({ onNavigateToBooth }: DisplayViewProps = {}) {
+  const router = useRouter();
   const [displayState, setDisplayState] = useState<DisplayState>('idle');
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
   const [attractIndex, setAttractIndex] = useState(0);
@@ -113,8 +118,29 @@ export function DisplayView() {
     return () => clearInterval(timer);
   }, [displayState]);
 
+  const handleBoothRedirect = () => {
+    if (onNavigateToBooth) {
+      onNavigateToBooth();
+    } else {
+      router.push('/booth');
+    }
+  };
+
   return (
     <div className="w-full min-h-[85vh] flex flex-col items-center justify-center overflow-hidden relative py-12 px-6">
+      {/* Corner Quick Action: Enter Photo Booth */}
+      <div className="absolute top-4 right-6 z-30">
+        <button
+          onClick={handleBoothRedirect}
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#141822]/90 hover:bg-[#1E2330] border border-[#262C3D] text-xs font-semibold text-white shadow-lg backdrop-blur-sm transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
+          title="Open Photo Booth Kiosk"
+        >
+          <Camera className="w-3.5 h-3.5 text-white" aria-hidden="true" />
+          <span>Launch Photo Booth</span>
+          <ArrowRight className="w-3.5 h-3.5 text-[#9CA3AF]" aria-hidden="true" />
+        </button>
+      </div>
+
       <AnimatePresence mode="wait">
         {/* State 1: Attract Mode (Idle) */}
         {displayState === 'idle' && (
@@ -178,10 +204,27 @@ export function DisplayView() {
               </motion.div>
             </div>
 
+            {/* Prominent Call to Action: Redirect to Photobooth */}
+            <div className="pt-2 flex flex-col items-center justify-center gap-3">
+              <button
+                onClick={handleBoothRedirect}
+                className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-white hover:bg-[#F3F4F6] text-[#08090C] text-base md:text-lg font-bold tracking-wide transition-all shadow-2xl hover:scale-[1.03] active:scale-[0.98] cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
+                aria-label="Step up to the Photo Booth to capture your portrait"
+              >
+                <Camera className="w-5 h-5 text-[#08090C]" aria-hidden="true" />
+                <span>Step Up to the Photo Booth</span>
+                <ArrowRight className="w-5 h-5 text-[#08090C]" aria-hidden="true" />
+              </button>
+              <div className="flex items-center gap-2 text-[#9CA3AF] text-xs font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Kiosk Terminal Active • Tap Button to Begin Transformation</span>
+              </div>
+            </div>
+
             {/* Instruction Callout */}
-            <div className="pt-6 flex items-center justify-center gap-3 text-[#9CA3AF] text-sm md:text-base">
-              <QrCode className="w-5 h-5 text-white" aria-hidden="true" />
-              <span>Step up to the booth kiosk to capture your photo and select an era</span>
+            <div className="pt-4 flex items-center justify-center gap-3 text-[#9CA3AF] text-xs md:text-sm">
+              <QrCode className="w-4 h-4 text-white" aria-hidden="true" />
+              <span>Tap the button above or visit the booth terminal to select your era</span>
             </div>
           </motion.div>
         )}

@@ -17,8 +17,59 @@ import {
   Mail,
   Phone,
   Tag,
+  Gauge,
+  Zap,
+  RotateCcw,
+  AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import { STYLES_SEED } from '@/config/styles-seed';
+
+export interface ApiUsageData {
+  gemini: {
+    name: string;
+    totalCalls: number;
+    successfulCalls: number;
+    failedCalls: number;
+    dailyLimit: number;
+    remainingToday: number;
+    percentUsed: number;
+    currentRpm: number;
+    rpmLimit: number;
+    isNearLimit: boolean;
+    isRateThrottled: boolean;
+    avgLatencyMs: number;
+    lastCallAt: string | null;
+    costTotal: string;
+  };
+  flux: {
+    name: string;
+    totalCalls: number;
+    successfulCalls: number;
+    failedCalls: number;
+    limitType: string;
+    currentRpm: number;
+    avgLatencyMs: number;
+    lastCallAt: string | null;
+    costTotal: string;
+  };
+  huggingFace: {
+    name: string;
+    totalCalls: number;
+    lastCallAt: string | null;
+  };
+  offline: {
+    name: string;
+    totalCalls: number;
+    lastCallAt: string | null;
+  };
+  summary: {
+    totalAiInferences: number;
+    totalCostEstimated: string;
+    sessionStartedAt: string;
+    lastResetAt: string;
+  };
+}
 
 interface TelemetryData {
   total: number;
@@ -31,6 +82,7 @@ interface TelemetryData {
   primaryEngine: string;
   visionEngine: string;
   styleCounts: Record<string, number>;
+  apiUsage?: ApiUsageData;
 }
 
 interface RecentSession {
@@ -96,6 +148,26 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
       setLoading(false);
     }
   }, []);
+
+  const [resettingApi, setResettingApi] = useState(false);
+  const handleResetApiMeter = async () => {
+    if (!window.confirm('Reset all API usage counters and session rate meters?')) return;
+    setResettingApi(true);
+    try {
+      const res = await fetch('/api/admin/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset-api-meter' }),
+      });
+      if (res.ok) {
+        await fetchTelemetry();
+      }
+    } catch {
+      // Quiet catch
+    } finally {
+      setResettingApi(false);
+    }
+  };
 
   const fetchCRMLeads = useCallback(async () => {
     setCrmLoading(true);
@@ -294,6 +366,185 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
               </div>
               <div className="text-[11px] text-[#6B7280] mt-1">
                 Instance execution time
+              </div>
+            </div>
+          </div>
+
+          {/* AI API Usage & Limits Real-time Counter Panel */}
+          <div className="p-5 rounded-lg bg-[#0E1118] border border-[#212530] space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#1C202B]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-md bg-[#161B26] border border-[#262C3D] text-white">
+                  <Gauge className="w-4 h-4" aria-hidden="true" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-sm text-white">AI API Usage & Free-Tier Quota Monitor</h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      LIVE LIMITS
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#9CA3AF]">
+                    Real-time consumption tracking against Google Gemini (15 RPM / 1,500 RPD) & Pollinations FLUX.1
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden md:block">
+                  <span className="text-[10px] text-[#6B7280] block font-mono">ESTIMATED API COST</span>
+                  <span className="text-xs font-bold text-emerald-400 font-mono">$0.00 (All Free Tier)</span>
+                </div>
+                <button
+                  onClick={handleResetApiMeter}
+                  disabled={resettingApi}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#141822] hover:bg-[#1E2330] border border-[#262C3D] text-[11px] font-medium text-[#D1D5DB] transition-colors cursor-pointer disabled:opacity-50"
+                  title="Reset session API counters for a new shift"
+                >
+                  <RotateCcw className={`w-3 h-3 ${resettingApi ? 'animate-spin' : ''}`} aria-hidden="true" />
+                  <span>Reset Shift</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Warning banner if near quota */}
+            {telemetry?.apiUsage?.gemini.isNearLimit && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2.5 text-xs text-amber-300">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+                <div>
+                  <strong>Gemini Daily Free Quota Warning:</strong> Over 80% of today&apos;s free 1,500 requests have been consumed. The system will smoothly fall back to user demographic hints and direct neural synthesis if the ceiling is reached.
+                </div>
+              </div>
+            )}
+
+            {/* Provider Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Card 1: Google Gemini Vision */}
+              <div className="p-4 rounded-lg bg-[#141822] border border-[#262C3D] space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
+                    <span className="text-xs font-semibold text-white">Google Gemini Multimodal Vision</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                    1,500 RPD / 15 RPM
+                  </span>
+                </div>
+
+                {/* Progress Bar & Big Counter */}
+                <div className="space-y-1.5">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-2xl font-bold font-mono text-white">
+                      {telemetry?.apiUsage ? telemetry.apiUsage.gemini.totalCalls : 0}
+                      <span className="text-xs text-[#9CA3AF] font-normal font-sans ml-1">/ 1,500 requests today</span>
+                    </span>
+                    <span className="text-xs font-mono font-semibold text-white">
+                      {telemetry?.apiUsage ? telemetry.apiUsage.gemini.percentUsed : 0}%
+                    </span>
+                  </div>
+
+                  {/* Progress track */}
+                  <div className="w-full h-2 rounded-full bg-[#0A0C10] border border-[#1E2330] overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 rounded-full ${
+                        (telemetry?.apiUsage?.gemini.percentUsed || 0) > 90
+                          ? 'bg-rose-500'
+                          : (telemetry?.apiUsage?.gemini.percentUsed || 0) > 70
+                          ? 'bg-amber-400'
+                          : 'bg-emerald-400'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(2, telemetry?.apiUsage?.gemini.percentUsed || 0))}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px] text-[#6B7280]">
+                    <span>Remaining: {telemetry?.apiUsage ? telemetry.apiUsage.gemini.remainingToday : 1500} calls</span>
+                    <span>Daily Quota Cap: 1,500</span>
+                  </div>
+                </div>
+
+                {/* Sub metrics */}
+                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#1F2533] text-center">
+                  <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
+                    <span className="text-[10px] text-[#6B7280] block">CURRENT RATE</span>
+                    <span className="text-xs font-mono font-bold text-white flex items-center justify-center gap-1 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      {telemetry?.apiUsage ? telemetry.apiUsage.gemini.currentRpm : 0} / 15 RPM
+                    </span>
+                  </div>
+                  <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
+                    <span className="text-[10px] text-[#6B7280] block">AVG LATENCY</span>
+                    <span className="text-xs font-mono font-bold text-white mt-0.5 block">
+                      {telemetry?.apiUsage?.gemini.avgLatencyMs ? `${telemetry.apiUsage.gemini.avgLatencyMs}ms` : '--'}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
+                    <span className="text-[10px] text-[#6B7280] block">USAGE COST</span>
+                    <span className="text-xs font-mono font-bold text-emerald-400 mt-0.5 block">
+                      $0.00 (Free)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Pollinations FLUX.1 Neural Engine */}
+              <div className="p-4 rounded-lg bg-[#141822] border border-[#262C3D] space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
+                    <span className="text-xs font-semibold text-white">Pollinations FLUX.1 Neural Engine</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                    UNCAPPED FREE
+                  </span>
+                </div>
+
+                {/* Big Counter */}
+                <div className="space-y-1.5">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-2xl font-bold font-mono text-white">
+                      {telemetry?.apiUsage ? telemetry.apiUsage.flux.totalCalls : 0}
+                      <span className="text-xs text-[#9CA3AF] font-normal font-sans ml-1">portrait syntheses</span>
+                    </span>
+                    <span className="text-xs font-mono font-semibold text-emerald-400">
+                      Uncapped Tier
+                    </span>
+                  </div>
+
+                  {/* Visual Uncapped Capacity Indicator */}
+                  <div className="w-full h-2 rounded-full bg-[#0A0C10] border border-[#1E2330] overflow-hidden">
+                    <div className="h-full bg-emerald-400 rounded-full w-full opacity-60" />
+                  </div>
+                  <div className="flex justify-between text-[11px] text-[#6B7280]">
+                    <span>High-Definition 1024x1024 Photorealistic Generation</span>
+                    <span>Status: Healthy & Active</span>
+                  </div>
+                </div>
+
+                {/* Sub metrics */}
+                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#1F2533] text-center">
+                  <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
+                    <span className="text-[10px] text-[#6B7280] block">SUCCESS RATE</span>
+                    <span className="text-xs font-mono font-bold text-white mt-0.5 block">
+                      {telemetry?.apiUsage && telemetry.apiUsage.flux.totalCalls > 0
+                        ? `${Math.round((telemetry.apiUsage.flux.successfulCalls / telemetry.apiUsage.flux.totalCalls) * 100)}%`
+                        : '100%'}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
+                    <span className="text-[10px] text-[#6B7280] block">AVG GENERATION</span>
+                    <span className="text-xs font-mono font-bold text-white mt-0.5 block">
+                      {telemetry?.apiUsage?.flux.avgLatencyMs
+                        ? `${(telemetry.apiUsage.flux.avgLatencyMs / 1000).toFixed(1)}s`
+                        : '--'}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
+                    <span className="text-[10px] text-[#6B7280] block">USAGE COST</span>
+                    <span className="text-xs font-mono font-bold text-emerald-400 mt-0.5 block">
+                      $0.00 (Free)
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -567,6 +818,59 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                   defaultValue="45"
                   className="w-full px-3 py-2 rounded bg-[#08090C] border border-[#262C3D] text-white text-xs focus:ring-1 focus:ring-white focus:outline-none"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed API Quotas & Provider Specifications */}
+          <div className="p-5 rounded-lg bg-[#0E1118] border border-[#212530] space-y-4">
+            <h3 className="font-semibold text-sm text-white flex items-center gap-2">
+              <Gauge className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+              API Quotas & Architecture Specifications
+            </h3>
+            <div className="divide-y divide-[#1C202B] text-xs">
+              <div className="py-2.5 flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-white block">Google Gemini Multimodal Vision API</span>
+                  <span className="text-[11px] text-[#6B7280]">Endpoint: generativelanguage.googleapis.com (v1beta)</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-emerald-400 font-semibold block">15 RPM / 1,500 RPD</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Tier: Free tier ($0.00)</span>
+                </div>
+              </div>
+
+              <div className="py-2.5 flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-white block">Pollinations FLUX.1 Neural Engine</span>
+                  <span className="text-[11px] text-[#6B7280]">Endpoint: image.pollinations.ai/prompt (1024x1024)</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-emerald-400 font-semibold block">Uncapped Capacity</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Tier: Community SOTA Free ($0.00)</span>
+                </div>
+              </div>
+
+              <div className="py-2.5 flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-white block">Hugging Face Serverless (FLUX.1-schnell)</span>
+                  <span className="text-[11px] text-[#6B7280]">Endpoint: router.huggingface.co/hf-inference</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-[#D1D5DB] font-semibold block">Secondary Hot Standby</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Tier: Serverless Inference ($0.00)</span>
+                </div>
+              </div>
+
+              <div className="py-2.5 flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-white block">Local Canvas RGBA Grading Core</span>
+                  <span className="text-[11px] text-[#6B7280]">Offline fallback inside local browser/server memory</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-emerald-400 font-semibold block">Infinite (Zero Network)</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Guaranteed 100% stall uptime</span>
+                </div>
               </div>
             </div>
           </div>
