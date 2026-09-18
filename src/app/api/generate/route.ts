@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sessions } from '@/lib/session-store';
 import { STYLES_SEED } from '@/config/styles-seed';
-import { recordGeminiCall, recordFluxCall, recordFallbackCall } from '@/lib/api-meter';
+import { recordOpenAiCall, recordGeminiCall, recordFluxCall, recordFallbackCall } from '@/lib/api-meter';
 
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
 
@@ -266,6 +267,155 @@ async function generateWithHuggingFace(
   return null;
 }
 
+/**
+ * Step 2A: OpenAI Image Generation (Primary Attempt)
+ * Attempts DALL-E generation. When OpenAI hits its quota limit (429),
+ * records it in the api-meter and returns null for instant seamless switch to Gemini & FLUX.
+ */
+async function generateWithOpenAI(
+  stylePrompt: string,
+  styleTitle: string,
+  profile: SubjectProfile
+): Promise<string | null> {
+  if (!OPENAI_API_KEY) return null;
+  const t0 = Date.now();
+
+  try {
+    const subjectTraits = `${profile.genderNoun}, ${profile.ageGroup}, ${profile.ethnicitySkinTone}, with ${profile.hair}${profile.facialHair !== 'none' ? ', ' + profile.facialHair : ''}, ${profile.facialFeatures}`;
+    const fullPrompt = `Masterpiece high-resolution ${styleTitle} portrait photograph of a ${subjectTraits}. ${stylePrompt}. Exact facial identity, authentic bone structure, master studio lighting, 8k resolution, cinematic photorealism.`;
+
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'dall-e-3',
+        prompt: fullPrompt.slice(0, 1000),
+        n: 1,
+        size: '1024x1024',
+        response_format: 'b64_json',
+      }),
+      signal: AbortSignal.timeout(25000),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const b64 = data.data?.[0]?.b64_json;
+      if (b64) {
+        recordOpenAiCall(true, Date.now() - t0, 'dall-e-3');
+        console.log('[Nexora AI] Successfully synthesized portrait with OpenAI DALL-E 3.');
+        return `data:image/jpeg;base64,${b64}`;
+      }
+      const url = data.data?.[0]?.url;
+      if (url) {
+        recordOpenAiCall(true, Date.now() - t0, 'dall-e-3');
+        return url;
+      }
+    } else {
+      const errText = await res.text();
+      const isQuota =
+        res.status === 429 ||
+        errText.includes('insufficient_quota') ||
+        errText.includes('rate_limit_exceeded') ||
+        errText.includes('billing');
+
+      recordOpenAiCall(false, Date.now() - t0, 'dall-e-3', isQuota ? 'insufficient_quota' : 'api_error');
+      console.warn(`[Nexora AI] OpenAI Image Generation error (${res.status}):`, errText);
+      console.warn('[Nexora AI] OpenAI limit reached. Seamlessly switching to Gemini & FLUX.1 failover...');
+    }
+  } catch (err) {
+    recordOpenAiCall(false, Date.now() - t0, 'dall-e-3', 'network_timeout');
+    console.warn('[Nexora AI] OpenAI request notice:', err);
+  }
+
+  return null;
+}
+
+/**
+ * Step 2B: Google Gemini Image Generation (Failover Engine)
+ * Directly invoked when OpenAI reaches its limit or quota error.
+ */
+async function generateWithGeminiImage(
+  stylePrompt: string,
+  styleTitle: string,
+  profile: SubjectProfile
+): Promise<string | null> {
+  if (!GEMINI_API_KEY) return null;
+  const t0 = Date.now();
+
+  const subjectTraits = `${profile.genderNoun}, ${profile.ageGroup}, ${profile.ethnicitySkinTone}, with ${profile.hair}${profile.facialHair !== 'none' ? ', ' + profile.facialHair : ''}, ${profile.facialFeatures}`;
+  const fullPrompt = `Masterpiece high-resolution ${styleTitle} portrait photograph of a ${subjectTraits}. ${stylePrompt}. Exact facial identity, authentic bone structure, master studio lighting, 8k resolution, cinematic photorealism.`;
+
+  // 1. Try Gemini Imagen 3 REST API
+  try {
+    const imagenRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instances: [{ prompt: fullPrompt.slice(0, 480) }],
+          parameters: {
+            sampleCount: 1,
+            aspectRatio: '1:1',
+            personGeneration: 'allow_adult',
+          },
+        }),
+        signal: AbortSignal.timeout(20000),
+      }
+    );
+
+    if (imagenRes.ok) {
+      const data = await imagenRes.json();
+      const b64 = data.predictions?.[0]?.bytesBase64Encoded;
+      if (b64) {
+        recordGeminiCall(true, Date.now() - t0, 'imagen-3.0');
+        console.log('[Nexora AI] Successfully synthesized portrait with Google Gemini Imagen 3.');
+        return `data:image/jpeg;base64,${b64}`;
+      }
+    }
+  } catch (err) {
+    console.warn('[Nexora AI] Gemini Imagen 3 attempt notice:', err);
+  }
+
+  // 2. Try Gemini OpenAI-compatible image endpoint (gemini-2.5-flash-image)
+  try {
+    const geminiAiRes = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/openai/images/generations',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gemini-2.5-flash-image',
+          prompt: fullPrompt.slice(0, 480),
+          n: 1,
+          response_format: 'b64_json',
+        }),
+        signal: AbortSignal.timeout(20000),
+      }
+    );
+
+    if (geminiAiRes.ok) {
+      const data = await geminiAiRes.json();
+      const b64 = data.data?.[0]?.b64_json;
+      if (b64) {
+        recordGeminiCall(true, Date.now() - t0, 'gemini-2.5-flash-image');
+        console.log('[Nexora AI] Successfully synthesized portrait with Gemini Flash Image.');
+        return `data:image/jpeg;base64,${b64}`;
+      }
+    }
+  } catch (err) {
+    console.warn('[Nexora AI] Gemini Flash Image attempt notice:', err);
+  }
+
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -303,20 +453,36 @@ export async function POST(request: NextRequest) {
 
         console.log(`[Nexora AI] Synthesizing ${style.title} for ${profile.genderNoun} (${profile.ethnicitySkinTone})`);
 
-        // 2. Primary Engine: FLUX.1 Photorealistic Neural Engine
-        let resultUrl = await generateWithFlux(
-          style.prompt,
-          style.title,
-          style.negative_prompt,
-          profile
-        );
+        // 2. Primary Engine: OpenAI API (Free Tier attempt)
+        let resultUrl: string | null = null;
+        if (OPENAI_API_KEY) {
+          console.log('[Nexora AI] Step 1: Attempting OpenAI API generation (Primary Engine)...');
+          resultUrl = await generateWithOpenAI(style.prompt, style.title, profile);
+        }
 
-        // 3. Fallback: Hugging Face FLUX.1
+        // 3. Seamless Failover: When OpenAI reaches limit or is unavailable, seamlessly switch to Gemini API
+        if (!resultUrl) {
+          console.log('[Nexora AI] Step 2: OpenAI limit reached. Seamlessly switching to Gemini API (Failover Engine)...');
+          resultUrl = await generateWithGeminiImage(style.prompt, style.title, profile);
+        }
+
+        // 4. Neural Engine Backup: Gemini-Anchored FLUX.1
+        if (!resultUrl) {
+          console.log('[Nexora AI] Step 3: Engaging Gemini-anchored FLUX.1 neural engine...');
+          resultUrl = await generateWithFlux(
+            style.prompt,
+            style.title,
+            style.negative_prompt,
+            profile
+          );
+        }
+
+        // 5. Secondary Fallback: Hugging Face FLUX.1
         if (!resultUrl) {
           resultUrl = await generateWithHuggingFace(style.prompt, profile);
         }
 
-        // 4. Client Pixel Transformation Fallback (guarantees 100% likeness)
+        // 6. Client Pixel Transformation Fallback (guarantees 100% likeness)
         if (!resultUrl) {
           console.log(`[Nexora AI] Offline mode: Grading ${style.title} locally.`);
           recordFallbackCall(false, 0);

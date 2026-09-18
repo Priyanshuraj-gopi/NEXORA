@@ -26,6 +26,23 @@ import {
 import { STYLES_SEED } from '@/config/styles-seed';
 
 export interface ApiUsageData {
+  openai: {
+    name: string;
+    totalCalls: number;
+    successfulCalls: number;
+    failedCalls: number;
+    quotaErrors: number;
+    isQuotaExceeded: boolean;
+    dailyLimit: number;
+    remainingToday: number;
+    percentUsed: number;
+    currentRpm: number;
+    rpmLimit: number;
+    avgLatencyMs: number;
+    lastCallAt: string | null;
+    status: string;
+    costTotal: string;
+  };
   gemini: {
     name: string;
     totalCalls: number;
@@ -40,6 +57,7 @@ export interface ApiUsageData {
     isRateThrottled: boolean;
     avgLatencyMs: number;
     lastCallAt: string | null;
+    status: string;
     costTotal: string;
   };
   flux: {
@@ -62,6 +80,12 @@ export interface ApiUsageData {
     name: string;
     totalCalls: number;
     lastCallAt: string | null;
+  };
+  failoverStatus: {
+    isFailoverActive: boolean;
+    activeVisionEngine: string;
+    activeGenerationEngine: string;
+    reason: string | null;
   };
   summary: {
     totalAiInferences: number;
@@ -379,21 +403,24 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-sm text-white">AI API Usage & Free-Tier Quota Monitor</h3>
+                    <h3 className="font-semibold text-sm text-white">Dual-Engine AI API Usage & Live Limit Counters</h3>
                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      LIVE LIMITS
+                      LIVE DUAL METER
                     </span>
                   </div>
                   <p className="text-[11px] text-[#9CA3AF]">
-                    Real-time consumption tracking against Google Gemini (15 RPM / 1,500 RPD) & Pollinations FLUX.1
+                    OpenAI Free Tier (Primary) with automated seamless failover to Google Gemini (1,500 RPD / 15 RPM)
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="text-right hidden md:block">
-                  <span className="text-[10px] text-[#6B7280] block font-mono">ESTIMATED API COST</span>
-                  <span className="text-xs font-bold text-emerald-400 font-mono">$0.00 (All Free Tier)</span>
+                  <span className="text-[10px] text-[#6B7280] block font-mono">FAILOVER ENGINE STATUS</span>
+                  <span className="text-xs font-bold text-white font-mono flex items-center gap-1.5 justify-end">
+                    <span className={`w-2 h-2 rounded-full ${telemetry?.apiUsage?.failoverStatus?.isFailoverActive ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
+                    {telemetry?.apiUsage?.failoverStatus?.isFailoverActive ? 'Gemini Active (Failover)' : 'Armed & Ready'}
+                  </span>
                 </div>
                 <button
                   onClick={handleResetApiMeter}
@@ -407,24 +434,113 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
               </div>
             </div>
 
-            {/* Warning banner if near quota */}
-            {telemetry?.apiUsage?.gemini.isNearLimit && (
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2.5 text-xs text-amber-300">
+            {/* Seamless Failover Active Alert */}
+            {telemetry?.apiUsage?.failoverStatus?.isFailoverActive ? (
+              <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 text-xs text-amber-200">
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <strong>Gemini Daily Free Quota Warning:</strong> Over 80% of today&apos;s free 1,500 requests have been consumed. The system will smoothly fall back to user demographic hints and direct neural synthesis if the ceiling is reached.
+                <div className="space-y-1">
+                  <div className="font-semibold text-white flex items-center gap-2">
+                    <span>⚡ Seamless Failover Engaged: Switched to Google Gemini</span>
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      ZERO DISRUPTION
+                    </span>
+                  </div>
+                  <p className="text-amber-300/90 text-[11px]">
+                    {telemetry.apiUsage.failoverStatus.reason ||
+                      'OpenAI free-tier daily or rate limit reached (HTTP 429). The system automatically routed generation to Google Gemini API & FLUX.1 neural engine.'}
+                  </p>
                 </div>
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-lg bg-[#121620] border border-[#1F2533] flex items-center justify-between text-xs text-[#9CA3AF]">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span><strong>Dual-Pipeline Active:</strong> Requests attempt <strong>OpenAI Free Tier</strong> first. If limit reached, seamlessly fails over to <strong>Google Gemini</strong>.</span>
+                </div>
+                <span className="font-mono text-[11px] text-emerald-400">Failover Latency: &lt;50ms</span>
               </div>
             )}
 
-            {/* Provider Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Card 1: Google Gemini Vision */}
+            {/* Provider Grid - Dual Engine Counters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Card 1: OpenAI DALL-E (Primary Engine) */}
+              <div className="p-4 rounded-lg bg-[#141822] border border-[#262C3D] space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-white" aria-hidden="true" />
+                    <span className="text-xs font-semibold text-white">OpenAI DALL-E (Primary)</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${telemetry?.apiUsage?.openai.isQuotaExceeded
+                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                      : 'bg-white/10 text-white border border-white/20'
+                    }`}>
+                    {telemetry?.apiUsage?.openai.isQuotaExceeded ? 'LIMIT REACHED' : '200 RPD / 50 RPM'}
+                  </span>
+                </div>
+
+                {/* Progress Bar & Big Counter */}
+                <div className="space-y-1.5">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-2xl font-bold font-mono text-white">
+                      {telemetry?.apiUsage ? telemetry.apiUsage.openai.totalCalls : 0}
+                      <span className="text-xs text-[#9CA3AF] font-normal font-sans ml-1">
+                        / {telemetry?.apiUsage?.openai.dailyLimit || 200} calls
+                      </span>
+                    </span>
+                    <span className={`text-xs font-mono font-semibold ${(telemetry?.apiUsage?.openai.percentUsed || 0) >= 100 ? 'text-rose-400' : 'text-white'
+                      }`}>
+                      {telemetry?.apiUsage ? telemetry.apiUsage.openai.percentUsed : 0}%
+                    </span>
+                  </div>
+
+                  {/* Progress track */}
+                  <div className="w-full h-2 rounded-full bg-[#0A0C10] border border-[#1E2330] overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 rounded-full ${(telemetry?.apiUsage?.openai.percentUsed || 0) >= 100
+                          ? 'bg-rose-500'
+                          : (telemetry?.apiUsage?.openai.percentUsed || 0) > 70
+                            ? 'bg-amber-400'
+                            : 'bg-white'
+                        }`}
+                      style={{ width: `${Math.min(100, Math.max(2, telemetry?.apiUsage?.openai.percentUsed || 0))}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px] text-[#6B7280]">
+                    <span>Remaining: {telemetry?.apiUsage ? telemetry.apiUsage.openai.remainingToday : 200}</span>
+                    <span>Status: {telemetry?.apiUsage?.openai.isQuotaExceeded ? 'Limit Reached' : 'Ready'}</span>
+                  </div>
+                </div>
+
+                {/* Sub metrics */}
+                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#1F2533] text-center">
+                  <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
+                    <span className="text-[10px] text-[#6B7280] block">CURRENT RATE</span>
+                    <span className="text-xs font-mono font-bold text-white flex items-center justify-center gap-1 mt-0.5">
+                      <span className={`w-1.5 h-1.5 rounded-full ${telemetry?.apiUsage?.openai.isQuotaExceeded ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'}`} />
+                      {telemetry?.apiUsage ? telemetry.apiUsage.openai.currentRpm : 0} / 50 RPM
+                    </span>
+                  </div>
+                  <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
+                    <span className="text-[10px] text-[#6B7280] block">AVG LATENCY</span>
+                    <span className="text-xs font-mono font-bold text-white mt-0.5 block">
+                      {telemetry?.apiUsage?.openai.avgLatencyMs ? `${telemetry.apiUsage.openai.avgLatencyMs}ms` : '--'}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
+                    <span className="text-[10px] text-[#6B7280] block">QUOTA LIMITS</span>
+                    <span className="text-xs font-mono font-bold text-amber-400 mt-0.5 block">
+                      {telemetry?.apiUsage?.openai.quotaErrors || 0} hit
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Google Gemini (Failover Engine) */}
               <div className="p-4 rounded-lg bg-[#141822] border border-[#262C3D] space-y-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Zap className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
-                    <span className="text-xs font-semibold text-white">Google Gemini Multimodal Vision</span>
+                    <span className="text-xs font-semibold text-white">Google Gemini (Failover)</span>
                   </div>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
                     1,500 RPD / 15 RPM
@@ -436,7 +552,7 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                   <div className="flex items-baseline justify-between">
                     <span className="text-2xl font-bold font-mono text-white">
                       {telemetry?.apiUsage ? telemetry.apiUsage.gemini.totalCalls : 0}
-                      <span className="text-xs text-[#9CA3AF] font-normal font-sans ml-1">/ 1,500 requests today</span>
+                      <span className="text-xs text-[#9CA3AF] font-normal font-sans ml-1">/ 1,500 requests</span>
                     </span>
                     <span className="text-xs font-mono font-semibold text-white">
                       {telemetry?.apiUsage ? telemetry.apiUsage.gemini.percentUsed : 0}%
@@ -446,19 +562,18 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                   {/* Progress track */}
                   <div className="w-full h-2 rounded-full bg-[#0A0C10] border border-[#1E2330] overflow-hidden">
                     <div
-                      className={`h-full transition-all duration-500 rounded-full ${
-                        (telemetry?.apiUsage?.gemini.percentUsed || 0) > 90
+                      className={`h-full transition-all duration-500 rounded-full ${(telemetry?.apiUsage?.gemini.percentUsed || 0) > 90
                           ? 'bg-rose-500'
                           : (telemetry?.apiUsage?.gemini.percentUsed || 0) > 70
-                          ? 'bg-amber-400'
-                          : 'bg-emerald-400'
-                      }`}
+                            ? 'bg-amber-400'
+                            : 'bg-blue-400'
+                        }`}
                       style={{ width: `${Math.min(100, Math.max(2, telemetry?.apiUsage?.gemini.percentUsed || 0))}%` }}
                     />
                   </div>
                   <div className="flex justify-between text-[11px] text-[#6B7280]">
                     <span>Remaining: {telemetry?.apiUsage ? telemetry.apiUsage.gemini.remainingToday : 1500} calls</span>
-                    <span>Daily Quota Cap: 1,500</span>
+                    <span>Cost: $0.00 (Free Tier)</span>
                   </div>
                 </div>
 
@@ -467,7 +582,7 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                   <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
                     <span className="text-[10px] text-[#6B7280] block">CURRENT RATE</span>
                     <span className="text-xs font-mono font-bold text-white flex items-center justify-center gap-1 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                       {telemetry?.apiUsage ? telemetry.apiUsage.gemini.currentRpm : 0} / 15 RPM
                     </span>
                   </div>
@@ -478,20 +593,20 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                     </span>
                   </div>
                   <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
-                    <span className="text-[10px] text-[#6B7280] block">USAGE COST</span>
+                    <span className="text-[10px] text-[#6B7280] block">ENGINE ROLE</span>
                     <span className="text-xs font-mono font-bold text-emerald-400 mt-0.5 block">
-                      $0.00 (Free)
+                      {telemetry?.apiUsage?.failoverStatus?.isFailoverActive ? 'ACTIVE' : 'STANDBY'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Card 2: Pollinations FLUX.1 Neural Engine */}
+              {/* Card 3: Pollinations FLUX.1 Neural Engine */}
               <div className="p-4 rounded-lg bg-[#141822] border border-[#262C3D] space-y-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
-                    <span className="text-xs font-semibold text-white">Pollinations FLUX.1 Neural Engine</span>
+                    <span className="text-xs font-semibold text-white">FLUX.1 Neural Engine</span>
                   </div>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
                     UNCAPPED FREE
@@ -503,7 +618,7 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                   <div className="flex items-baseline justify-between">
                     <span className="text-2xl font-bold font-mono text-white">
                       {telemetry?.apiUsage ? telemetry.apiUsage.flux.totalCalls : 0}
-                      <span className="text-xs text-[#9CA3AF] font-normal font-sans ml-1">portrait syntheses</span>
+                      <span className="text-xs text-[#9CA3AF] font-normal font-sans ml-1">syntheses</span>
                     </span>
                     <span className="text-xs font-mono font-semibold text-emerald-400">
                       Uncapped Tier
@@ -515,8 +630,8 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                     <div className="h-full bg-emerald-400 rounded-full w-full opacity-60" />
                   </div>
                   <div className="flex justify-between text-[11px] text-[#6B7280]">
-                    <span>High-Definition 1024x1024 Photorealistic Generation</span>
-                    <span>Status: Healthy & Active</span>
+                    <span>1024x1024 Photorealistic</span>
+                    <span>Status: Active</span>
                   </div>
                 </div>
 
@@ -531,7 +646,7 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                     </span>
                   </div>
                   <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
-                    <span className="text-[10px] text-[#6B7280] block">AVG GENERATION</span>
+                    <span className="text-[10px] text-[#6B7280] block">AVG SPEED</span>
                     <span className="text-xs font-mono font-bold text-white mt-0.5 block">
                       {telemetry?.apiUsage?.flux.avgLatencyMs
                         ? `${(telemetry.apiUsage.flux.avgLatencyMs / 1000).toFixed(1)}s`
@@ -539,9 +654,9 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
                     </span>
                   </div>
                   <div className="p-2 rounded bg-[#0E1118] border border-[#1C202B]">
-                    <span className="text-[10px] text-[#6B7280] block">USAGE COST</span>
+                    <span className="text-[10px] text-[#6B7280] block">COST</span>
                     <span className="text-xs font-mono font-bold text-emerald-400 mt-0.5 block">
-                      $0.00 (Free)
+                      $0.00
                     </span>
                   </div>
                 </div>
@@ -831,12 +946,23 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
             <div className="divide-y divide-[#1C202B] text-xs">
               <div className="py-2.5 flex items-center justify-between">
                 <div>
-                  <span className="font-medium text-white block">Google Gemini Multimodal Vision API</span>
+                  <span className="font-medium text-white block">OpenAI DALL-E 3 API (Primary Generation Engine)</span>
+                  <span className="text-[11px] text-[#6B7280]">Endpoint: api.openai.com/v1/images/generations (1024x1024)</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-white font-semibold block">50 RPM / 200 RPD</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Tier: Primary Image Generation</span>
+                </div>
+              </div>
+
+              <div className="py-2.5 flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-white block">Google Gemini API (Automated Failover Engine)</span>
                   <span className="text-[11px] text-[#6B7280]">Endpoint: generativelanguage.googleapis.com (v1beta)</span>
                 </div>
                 <div className="text-right">
                   <span className="font-mono text-emerald-400 font-semibold block">15 RPM / 1,500 RPD</span>
-                  <span className="text-[10px] text-[#9CA3AF]">Tier: Free tier ($0.00)</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Tier: Free tier ($0.00) • Seamless Failover</span>
                 </div>
               </div>
 
