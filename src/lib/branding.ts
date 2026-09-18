@@ -299,12 +299,12 @@ function drawNexoraWatermark(
 
   ctx.fillStyle = '#FFFFFF';
   ctx.font = `bold ${15 * scale}px system-ui, -apple-system, sans-serif`;
-  ctx.fillText('NEXORA', textX, y + 27 * scale);
+  ctx.fillText('NEXORA', textX, y + 25 * scale);
 
   ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-  ctx.font = `${11 * scale}px system-ui, -apple-system, sans-serif`;
-  const label = `${styleName.toUpperCase()} • SAME YOU. DIFFERENT ERA.`;
-  ctx.fillText(label, textX, y + 47 * scale);
+  ctx.font = `${10 * scale}px system-ui, -apple-system, sans-serif`;
+  const label = `${styleName.toUpperCase()} • TAPMI BENGALURU IT CLUB`;
+  ctx.fillText(label, textX, y + 46 * scale);
 
   ctx.restore();
 }

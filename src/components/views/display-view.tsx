@@ -125,14 +125,26 @@ export function DisplayView() {
             exit={{ opacity: 0 }}
             className="relative z-10 text-center px-6 max-w-5xl mx-auto space-y-10"
           >
-            <div className="space-y-4">
-              <h1 className="text-7xl md:text-9xl lg:text-[10rem] font-bold tracking-[0.2em] select-none text-white leading-none">
+            <div className="space-y-4 flex flex-col items-center">
+              <div className="w-24 h-24 md:w-32 md:h-32 mb-1">
+                <img
+                  src="/logo.png"
+                  alt="Nexora TAPMI Bengaluru IT Club Logo"
+                  className="w-full h-full object-contain drop-shadow-2xl"
+                />
+              </div>
+
+              <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold tracking-[0.2em] select-none text-white leading-none">
                 NEXORA
               </h1>
 
-              <div className="space-y-1">
-                <p className="text-3xl md:text-5xl font-light text-[#D1D5DB]">Same You.</p>
-                <p className="text-3xl md:text-5xl font-semibold text-white tracking-wide">
+              <p className="text-xs md:text-sm font-mono tracking-widest text-[#9CA3AF] uppercase">
+                TAPMI Bengaluru IT Club
+              </p>
+
+              <div className="space-y-1 pt-2">
+                <p className="text-2xl md:text-4xl font-light text-[#D1D5DB]">Same You.</p>
+                <p className="text-2xl md:text-4xl font-semibold text-white tracking-wide">
                   Different Era.
                 </p>
               </div>

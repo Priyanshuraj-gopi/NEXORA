@@ -23,14 +23,16 @@ export default function MasterAppPage() {
       {!hideSwitcher && (
         <header className="sticky top-0 z-50 bg-[#0E1118]/90 backdrop-blur-md border-b border-[#212530] transition-all">
           <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-            {/* Enterprise Branding */}
+            {/* Enterprise Official Branding */}
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white text-[#08090C] flex items-center justify-center font-bold text-sm tracking-tight shadow-sm">
-                N
-              </div>
+              <img
+                src="/logo.png"
+                alt="Nexora TAPMI Bengaluru IT Club Logo"
+                className="w-9 h-9 object-contain drop-shadow-sm"
+              />
               <div className="flex flex-col">
                 <span className="font-bold tracking-[0.2em] text-sm text-white leading-none">NEXORA</span>
-                <span className="text-[11px] text-[#9CA3AF] tracking-normal mt-0.5">Same You. Different Era.</span>
+                <span className="text-[10px] font-mono text-[#9CA3AF] tracking-tight mt-0.5">TAPMI BENGALURU IT CLUB</span>
               </div>
             </div>
 

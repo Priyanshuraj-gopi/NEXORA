@@ -141,14 +141,21 @@ export function AdminView({ onSwitchView }: { onSwitchView?: (view: 'booth' | 'd
     <div className="w-full max-w-7xl mx-auto px-6 py-6 space-y-6">
       {/* Admin Subheader */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#212530]">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-bold tracking-tight text-white">Event Operations Hub</h2>
-            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-mono font-semibold">
-              TELEMETRY ACTIVE
-            </span>
+        <div className="flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="Nexora TAPMI Bengaluru Logo"
+            className="w-10 h-10 object-contain drop-shadow-sm"
+          />
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-xl font-bold tracking-tight text-white">Event Operations Hub</h2>
+              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-mono font-semibold">
+                TELEMETRY ACTIVE
+              </span>
+            </div>
+            <p className="text-xs text-[#9CA3AF] mt-0.5">Nexora • TAPMI Bengaluru IT Club — Live stall telemetry & CRM</p>
           </div>
-          <p className="text-xs text-[#9CA3AF] mt-1">Live in-memory stall session telemetry, style registry & visitor CRM</p>
         </div>
 
         <div className="flex items-center gap-2">
