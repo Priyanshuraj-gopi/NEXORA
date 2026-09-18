@@ -40,15 +40,16 @@ interface CRMStore {
   inquiries: Map<string, BookingInquiry>;
 }
 
-const globalForCRM = globalThis as unknown as {
-  crmStore?: CRMStore;
-};
+declare global {
+  var __nexora_crmStore: CRMStore | undefined;
+}
 
-export const crmStore: CRMStore = globalForCRM.crmStore ?? {
-  leads: new Map<string, CustomerLead>(),
-  inquiries: new Map<string, BookingInquiry>(),
-};
-globalForCRM.crmStore = crmStore;
+export const crmStore: CRMStore =
+  globalThis.__nexora_crmStore ?? {
+    leads: new Map<string, CustomerLead>(),
+    inquiries: new Map<string, BookingInquiry>(),
+  };
+globalThis.__nexora_crmStore = crmStore;
 
 // Utility functions for CRM operations
 export function createLead(data: Omit<CustomerLead, 'id' | 'createdAt' | 'updatedAt'>): CustomerLead {
