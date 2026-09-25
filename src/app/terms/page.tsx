@@ -82,7 +82,7 @@ export default function TermsPage() {
           <section className="space-y-3 border-t border-[#212530] pt-6">
             <h2 className="text-lg font-semibold text-white">6. Contact Information</h2>
             <div className="p-4 rounded-lg bg-[#111319] border border-[#212530] font-mono text-xs text-[#9CA3AF]">
-              <p>Nexora Legal Department: legal@nexora-booth.internal</p>
+              <p>Nexora Legal Department: legal@nexorastall.com</p>
             </div>
           </section>
         </div>

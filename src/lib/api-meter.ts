@@ -375,11 +375,17 @@ export function resetApiUsageMetrics() {
   apiMeter.gemini = fresh.gemini;
   apiMeter.flux = fresh.flux;
   apiMeter.huggingFace = fresh.huggingFace;
-  apiMeter.offline = fresh.offline;
   apiMeter.activeVisionProvider = fresh.activeVisionProvider;
   apiMeter.activeGenerationProvider = fresh.activeGenerationProvider;
   apiMeter.failoverEngaged = false;
   apiMeter.lastFailoverReason = null;
   apiMeter.lastResetAt = new Date().toISOString();
   return getApiUsageSummary();
+}
+
+/**
+ * Check if OpenAI is available and has not exceeded quota
+ */
+export function canUseOpenAI(): boolean {
+  return !apiMeter.openai.isQuotaExceeded;
 }

@@ -62,10 +62,10 @@ export function QRModal({ sessionId, onClose }: QRModalProps) {
           </div>
         </div>
 
-        <p className="text-sm text-foreground/40 mb-2">
+        <p className="text-sm text-[#D1D5DB] mb-2 font-medium">
           Scan this QR code with your phone
         </p>
-        <p className="text-xs text-foreground/20">
+        <p className="text-xs text-[#9CA3AF]">
           Link expires in 24 hours
         </p>
       </motion.div>

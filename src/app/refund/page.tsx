@@ -61,7 +61,7 @@ export default function RefundPolicyPage() {
           <section className="space-y-3 border-t border-[#212530] pt-6">
             <h2 className="text-lg font-semibold text-white">3. Resolution Contact</h2>
             <p className="text-[#9CA3AF]">
-              Direct payment dispute inquiries to: refunds@nexora-booth.internal
+              Direct payment dispute inquiries to: refunds@nexorastall.com
             </p>
           </section>
         </div>

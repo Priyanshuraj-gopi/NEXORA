@@ -5,7 +5,6 @@ import { Download, QrCode, Share2, RotateCcw, Check, Loader2, Video, Shield, Mai
 import Link from 'next/link';
 import { QRModal } from '@/components/qr-modal';
 import { LeadCaptureModal } from '@/components/lead-capture-modal';
-import { applyEraStylingAndBrand } from '@/lib/branding';
 import { generateCinematicVideo } from '@/lib/video-generator';
 
 interface ResultScreenProps {
@@ -24,20 +23,11 @@ export function ResultScreen({ resultImage, sessionId, styleName, onReset }: Res
   const [videoDownloaded, setVideoDownloaded] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [shared, setShared] = useState(false);
-  const [isProcessingBrand, setIsProcessingBrand] = useState(true);
+  const [isProcessingBrand] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    applyEraStylingAndBrand(resultImage, { styleName }).then((branded) => {
-      if (isMounted) {
-        setBrandedImage(branded);
-        setIsProcessingBrand(false);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [resultImage, styleName]);
+    setBrandedImage(resultImage);
+  }, [resultImage]);
 
   const handleDownload = useCallback(async () => {
     try {

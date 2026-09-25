@@ -1,4 +1,4 @@
-import { Style } from '@/types';
+import type { Style } from '../types';
 
 /**
  * Predefined Master Prompts engineered via ChatGPT / Sider.ai Prompt Engineering framework.
