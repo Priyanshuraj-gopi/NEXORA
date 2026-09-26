@@ -106,6 +106,8 @@ export default function MobileResultPage({
   const handleShare = useCallback(async () => {
     const url = brandedUrl || result?.outputImageUrl;
     const currentUrl = window.location.href;
+    const styleDisplay = result?.style ? result.style.replace(/-/g, ' ') : 'AI';
+    const shareText = `Check out my ${styleDisplay} portrait transformation at NEXORA AI Photo Booth! Same You. Different Era. #NexoraAI #AIPhotoBooth`;
 
     if (navigator.share) {
       try {
@@ -117,7 +119,7 @@ export default function MobileResultPage({
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
               title: 'NEXORA: Same You. Different Era.',
-              text: `Check out my ${result?.style} AI photograph from Nexora!`,
+              text: `${shareText}\n\n${currentUrl}`,
               files: [file],
             });
             setShared(true);
@@ -128,7 +130,7 @@ export default function MobileResultPage({
 
         await navigator.share({
           title: 'NEXORA: Same You. Different Era.',
-          text: `Check out my ${result?.style} AI photograph from Nexora!`,
+          text: shareText,
           url: currentUrl,
         });
         setShared(true);
@@ -137,7 +139,7 @@ export default function MobileResultPage({
         // Share dismissed
       }
     } else {
-      await navigator.clipboard.writeText(currentUrl);
+      await navigator.clipboard.writeText(`${shareText}\n${currentUrl}`);
       setShared(true);
       setTimeout(() => setShared(false), 3000);
     }

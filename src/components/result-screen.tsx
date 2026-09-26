@@ -71,6 +71,7 @@ export function ResultScreen({ resultImage, sessionId, styleName, onReset }: Res
 
   const handleShare = useCallback(async () => {
     const shareUrl = `${window.location.origin}/result/${sessionId}`;
+    const shareText = `Check out my ${styleName} portrait transformation at NEXORA AI Photo Booth! Same You. Different Era. #NexoraAI #AIPhotoBooth`;
 
     if (navigator.share) {
       try {
@@ -81,7 +82,7 @@ export function ResultScreen({ resultImage, sessionId, styleName, onReset }: Res
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
             title: `NEXORA: ${styleName} Transformation`,
-            text: `View my ${styleName} portrait transformation.`,
+            text: `${shareText}\n\n${shareUrl}`,
             files: [file],
           });
           setShared(true);
@@ -91,7 +92,7 @@ export function ResultScreen({ resultImage, sessionId, styleName, onReset }: Res
 
         await navigator.share({
           title: `NEXORA: ${styleName} Transformation`,
-          text: `View my ${styleName} portrait transformation.`,
+          text: shareText,
           url: shareUrl,
         });
         setShared(true);
@@ -100,7 +101,7 @@ export function ResultScreen({ resultImage, sessionId, styleName, onReset }: Res
         // User dismissed
       }
     } else {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
       setShared(true);
       setTimeout(() => setShared(false), 3000);
     }

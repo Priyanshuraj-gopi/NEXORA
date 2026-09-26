@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://nexoraaiphotobooth.vercel.app'),
   title: 'NEXORA: Same You. Different Era.',
   description:
     'Professional digital photo booth application for events and exhibitions. Stylistic portrait transformations with strict biometric privacy compliance.',
