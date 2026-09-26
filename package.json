@@ -42,6 +42,7 @@
     "esbuild": true,
     "sharp": true,
     "protobufjs": true,
-    "re2": true
+    "re2": true,
+    "unrs-resolver": true
   }
 }

@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og';
 
-export const runtime = 'edge';
 export const alt = 'Nexora Photo Booth: Same You. Different Era.';
 export const size = {
   width: 1200,
